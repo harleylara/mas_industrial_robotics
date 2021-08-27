@@ -53,3 +53,37 @@ Workspace height:
 ```
 /mcr_perception/scene_segmentation/output/workspace_height
 ```
+
+# Crate segmentation
+
+Publishes bounding boxes and a pose array of objects inside a crate.
+The poses are on **top** of the object, not the center, so for grasping you may want
+to go down a bit.
+An outer bounding box of the crate is also available, but not published.
+
+Launch:
+
+```
+roslaunch mir_object_segmentaiton crate_segmentation.launch
+```
+
+Start:
+```
+rostopic pub /mir_perception/crate_segmentation/event_in std_msgs/String e_start
+```
+
+Stop:
+```
+rostopic pub /mir_perception/crate_segmentation/event_in std_msgs/String e_stop
+```
+
+Bounding boxes:
+```
+/mir_perception/crate_segmentation/output/bounding_boxes
+```
+
+Poses:
+```
+/mir_perception/crate_segmentation/output/object_poses
+```
+

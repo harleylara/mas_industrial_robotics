@@ -78,6 +78,15 @@ target_link_libraries(scene_segmentation_node
   ${PROJECT_NAME}
 )
 
+add_executable(crate_segmentation_node
+  ros/src/crate_segmentation_node.cpp
+  common/src/crate_detection.cpp
+  common/src/bounding_box.cpp
+)
+target_link_libraries(crate_segmentation_node
+  ${catkin_LIBRARIES}
+)
+
 roslint_cpp()
 
 ### TESTS

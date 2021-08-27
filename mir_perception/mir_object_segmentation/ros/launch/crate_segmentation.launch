@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="input_pointcloud_topic" default="/arm_cam3d/depth_registered/points" />
+  <arg name="target_frame" default="base_link" />
+  <arg name="source_frame" default="fixed_camera_link" />
+
+  <group ns="mir_perception">
+    <node pkg="mir_object_segmentation" type="crate_segmentation_node" name="crate_segmentation" output="screen">
+      <remap from="~input" to="$(arg input_pointcloud_topic)" />
+      <remap from="~output/object_list" to="/mir_perception/scene_segmentation/output/object_list"/>
+      <param name="target_frame_id" value="$(arg target_frame)" type="str" />
+      <param name="source_frame_id" value="$(arg source_frame)" type="str" />
+    </node>
+  </group>
+
+</launch>
