@@ -27,6 +27,8 @@
 #include <mir_object_segmentation/crate_detection.h>
 #include <mir_object_segmentation/crate_segmentation_node.h>
 
+#include <string>
+
 CrateSegmentationNode::CrateSegmentationNode()
     : nh_("~"),
       bounding_box_visualizer_("output/bounding_boxes", Color(Color::SEA_GREEN)),
@@ -100,6 +102,8 @@ void CrateSegmentationNode::pointcloudCallback(const sensor_msgs::PointCloud2::P
     sensor_msgs::PointCloud2ConstPtr input_cloud_msg = msg;
     input_cloud_msg->header.frame_id = this->source_frame_id_;
     sensor_msgs::PointCloud2 msg_transformed;
+    mas_perception_msgs::ObjectList object_list;
+
     if (!mpu::pointcloud::transformPointCloudMsg(tf_listener_, target_frame_id_, *input_cloud_msg,
                                                  msg_transformed))
     {
@@ -122,17 +126,46 @@ void CrateSegmentationNode::pointcloudCallback(const sensor_msgs::PointCloud2::P
     bounding_boxes.bounding_boxes.resize(clusters.size());
 
     geometry_msgs::PoseArray poses;
+    //create object list size as per clusters
+    object_list.objects.resize(clusters.size());
     poses.header.stamp = ros::Time::now();
     poses.header.frame_id = target_frame_id_;
     std::vector<std::string> labels;
-
+  
+    ros::Time now = ros::Time::now();
     for (int i = 0; i < clusters.size(); i++) {
         convertBoundingBox(boxes[i], bounding_boxes.bounding_boxes[i]);
         geometry_msgs::PoseStamped pose;
         estimatePose(boxes[i], pose);
+        pose.header.stamp = now;
+        pose.header.frame_id = target_frame_id_;
+
+        //hack to set roll and pitch to zero , can be done with Eigen
+        //quaterninon in estimate pose function above
+        tf::Quaternion temp;
+        tf::quaternionMsgToTF(pose.pose.orientation, temp);
+        tf::Matrix3x3 m(temp);
+        double roll, pitch, yaw;
+        m.getRPY(roll, pitch, yaw);
+        pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, 0);
+        //End of hack
+        
         poses.poses.push_back(pose.pose);
+
+
+        //Assign ros_cloud 
+        sensor_msgs::PointCloud2 ros_cloud;
+        ros_cloud.header.frame_id = target_frame_id_;
+        pcl::toROSMsg(*clusters[i], ros_cloud);
+
+        // Assign number name for every object by default then recognize it later
+        object_list.objects[i].views.resize(1);
+        object_list.objects[i].views[0].point_cloud = ros_cloud;
+        object_list.objects[i].name = std::to_string(i);;
+        object_list.objects[i].probability = 0.0;
+        object_list.objects[i].pose = pose;
     }
-    //pub_object_list_.publish(object_list);
+    pub_object_list_.publish(object_list);
     bounding_box_visualizer_.publish(bounding_boxes.bounding_boxes, target_frame_id_);
     cluster_visualizer_.publish<PointT>(clusters, target_frame_id_);
     pub_pose_list_.publish(poses);
@@ -148,6 +181,8 @@ void CrateSegmentationNode::pointcloudCallback(const sensor_msgs::PointCloud2::P
     pcl::toROSMsg(*cloud_debug, ros_pc2);
     ros_pc2.header.frame_id = target_frame_id_;
     pub_debug_.publish(ros_pc2);
+    //msg_transformed.header.frame_id = target_frame_id_;
+    //pub_debug_.publish(msg_transformed);
 }
 
 

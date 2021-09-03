@@ -387,7 +387,9 @@ def main():
             "MOVE_ARM_TO_STAGE_INTERMEDIATE",
             gms.move_arm("stage_intermediate"),
             transitions={
-                "succeeded": "VERIFY_OBJECT_GRASPED",
+                #HAck for sciroc remove this
+                #"succeeded": "VERIFY_OBJECT_GRASPED",
+                "succeeded": "OVERALL_SUCCESS",
                 "failed": "MOVE_ARM_TO_STAGE_INTERMEDIATE",
             },
         )

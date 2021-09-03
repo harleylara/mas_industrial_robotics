@@ -4,7 +4,7 @@
     <arg name="base_motion_enabled" default="false" />
     <arg name="is_camera_static" default="false" />
 
-    <node pkg="mir_perceive_location" type="perceive_location_server.py" name="perceive_location_server" output="screen">
+    <node pkg="mir_perceive_crate" type="perceive_crate_server.py" name="perceive_crate_server" output="screen">
         <param name="base_motion_enabled" type="bool" value="$(arg base_motion_enabled)" />
         <param name="is_camera_static" type="bool" value="$(arg is_camera_static)" />
     </node>

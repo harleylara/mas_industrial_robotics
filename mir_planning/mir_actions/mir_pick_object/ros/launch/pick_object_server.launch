@@ -8,7 +8,7 @@
         <rosparam param="large_objects" subst_value="True">
             $(arg large_objects)
         </rosparam>
-        <param name="reperceive" type="bool" value="true"/>
+        <param name="reperceive" type="bool" value="false"/>
     </node>
 
 </launch>

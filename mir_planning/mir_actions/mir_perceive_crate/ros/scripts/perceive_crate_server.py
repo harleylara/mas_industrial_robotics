@@ -208,7 +208,7 @@ class GetMotionType(smach.State):
 
 
 def main():
-    rospy.init_node("perceive_location_server")
+    rospy.init_node("perceive_crate_server")
     sleep_time = rospy.get_param("~sleep_time", 1.0)
     # Construct state machine
     sm = smach.StateMachine(
@@ -381,18 +381,45 @@ def main():
             gbs.send_and_wait_events_combined(
                 event_in_list=[
                     (
-                        "/mir_perception/multimodal_object_recognition/event_in",
+                        "/mir_perception/crate_segmentation/event_in",
                         "e_start",
                     )
                 ],
                 event_out_list=[
                     (
-                        "/mir_perception/multimodal_object_recognition/event_out",
-                        "e_done",
+                        "/mir_perception/crate_segmentation/event_out",
+                        "e_started",
                         True,
                     )
                 ],
-                timeout_duration=10,
+                timeout_duration=2,
+            ),
+            transitions={
+                "success": "WAIT_FOR_SINGLE_EVENT_FROM_PERCEPTION",
+                "timeout": "OVERALL_FAILED",
+                "failure": "OVERALL_FAILED",
+            },
+        )
+
+        # Wait for single event from perception
+        # Using send_and_wait as wait_single_event doesnt has a timeout_duration
+        smach.StateMachine.add(
+            "WAIT_FOR_SINGLE_EVENT_FROM_PERCEPTION",
+            gbs.send_and_wait_events_combined(
+                event_in_list=[
+                    (
+                        "/mir_perception/crate_segmentation/event_in",
+                        "e_nothing",
+                    )
+                ],
+                event_out_list=[
+                    (
+                        "/mir_perception/crate_segmentation/event_out",
+                        "e_add_cloud_stopped",
+                        True,
+                    )
+                ],
+                timeout_duration=5,
             ),
             transitions={
                 "success": "STOP_RECOGNITION",
@@ -400,19 +427,18 @@ def main():
                 "failure": "OVERALL_FAILED",
             },
         )
-
         smach.StateMachine.add(
             "STOP_RECOGNITION",
             gbs.send_and_wait_events_combined(
                 event_in_list=[
                     (
-                        "/mir_perception/multimodal_object_recognition/event_in",
+                        "/mir_perception/crate_segmentation/event_in",
                         "e_stop",
                     )
                 ],
                 event_out_list=[
                     (
-                        "/mir_perception/multimodal_object_recognition/event_out",
+                        "/mir_perception/crate_segmentation/event_out",
                         "e_stopped",
                         True,
                     )
@@ -421,8 +447,8 @@ def main():
             ),
             transitions={
                 "success": "CHECK_IF_STATIC_CAMERA",
-                "timeout": "OVERALL_FAILED",
-                "failure": "OVERALL_FAILED",
+                "timeout": "CHECK_IF_STATIC_CAMERA", #Go ahead with timeout and failure
+                "failure": "CHECK_IF_STATIC_CAMERA", #The e_add_cloud_stopped message is conitnuosly send my perceive_crate_server.py
             },
         )
 
@@ -532,13 +558,13 @@ def main():
     # smach viewer
     if rospy.get_param("~viewer_enabled", False):
         sis = IntrospectionServer(
-            "perceive_location_smach_viewer", sm, "/PERCEIVE_LOCATION_SMACH_VIEWER",
+            "perceive_crate_smach_viewer", sm, "/PERCEIVE_CRATE_SMACH_VIEWER",
         )
         sis.start()
 
     # Construct action server wrapper
     asw = ActionServerWrapper(
-        server_name="perceive_location_server",
+        server_name="perceive_crate_server",
         action_spec=GenericExecuteAction,
         wrapped_container=sm,
         succeeded_outcomes=["OVERALL_SUCCESS"],

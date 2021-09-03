@@ -8,7 +8,7 @@
   <group ns="mir_perception">
     <node pkg="mir_object_segmentation" type="crate_segmentation_node" name="crate_segmentation" output="screen">
       <remap from="~input" to="$(arg input_pointcloud_topic)" />
-      <remap from="~output/object_list" to="/mir_perception/scene_segmentation/output/object_list"/>
+      <remap from="~output/object_list" to="/mcr_perception/object_detector/object_list"/>
       <param name="target_frame_id" value="$(arg target_frame)" type="str" />
       <param name="source_frame_id" value="$(arg source_frame)" type="str" />
     </node>
