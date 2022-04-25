@@ -57,6 +57,7 @@ class CrateSegmentationNode
 
   BoundingBoxVisualizer bounding_box_visualizer_;
   ClusteredPointCloudVisualizer cluster_visualizer_;
+  LabelVisualizer label_visualizer_;
 
   // Parameters
   std::string target_frame_id_;

@@ -283,7 +283,7 @@ def main():
                 timeout_duration=10,
             ),
             transitions={
-                "success": "CHECK_IF_OBJECT_LARGE",
+                "success": "OPEN_GRIPPER_NARROW",
                 "timeout": "OVERALL_FAILED",
                 "failure": "OVERALL_FAILED",
             },
@@ -362,8 +362,8 @@ def main():
                 "success": "CLOSE_GRIPPER",
                 "timeout": "STOP_MOVE_ROBOT_TO_OBJECT_WITH_FAILURE",
                 "failure": "STOP_MOVE_ROBOT_TO_OBJECT_WITH_FAILURE",
-            },
-        )
+        },
+    )
 
         smach.StateMachine.add(
             "STOP_MOVE_ROBOT_TO_OBJECT_WITH_FAILURE",

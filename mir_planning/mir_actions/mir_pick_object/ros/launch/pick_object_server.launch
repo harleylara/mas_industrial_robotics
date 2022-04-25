@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="large_objects" default="['S40_40_B', 'S40_40_G', 'M30', 'BEARING_BOX', 'MOTOR']" />
+    <arg name="large_objects" default="['S40_40_B', 'S40_40_G', 'M30', 'BEARING_BOX', 'MOTOR', '0', '1', '2', '3']" />
 
     <node pkg="mir_pick_object" type="pick_object_server.py"
           name="wbc_pick_object_server" output="screen">
-        <rosparam param="large_objects" subst_value="True">
+        <rosparam param="large_objects" subst_value="False">
             $(arg large_objects)
         </rosparam>
         <param name="reperceive" type="bool" value="false"/>

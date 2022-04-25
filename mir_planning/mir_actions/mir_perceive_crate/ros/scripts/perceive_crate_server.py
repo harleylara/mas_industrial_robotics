@@ -392,10 +392,11 @@ def main():
                         True,
                     )
                 ],
-                timeout_duration=2,
+                timeout_duration=5,
             ),
             transitions={
                 "success": "WAIT_FOR_SINGLE_EVENT_FROM_PERCEPTION",
+                # "success": "STOP_RECOGNITION",
                 "timeout": "OVERALL_FAILED",
                 "failure": "OVERALL_FAILED",
             },
@@ -419,7 +420,7 @@ def main():
                         True,
                     )
                 ],
-                timeout_duration=5,
+                timeout_duration=10,
             ),
             transitions={
                 "success": "STOP_RECOGNITION",

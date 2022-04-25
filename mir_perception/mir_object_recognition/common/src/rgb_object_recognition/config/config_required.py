@@ -23,11 +23,14 @@ def base_model_config(dataset='PASCAL_VOC'):
                              'horse', 'motorbike', 'person', 'pottedplant', 'sheep',
                              'sofa', 'train', 'tvmonitor')
     elif cfg.DATASET == 'KITTI':
-        cfg.CLASS_NAMES =('s40_40_G', 's40_40_B', 'r20','motor',
-                            'm30', 'm20_100', 'm20', 'f20_20_G', 'f20_20_B',
-                            'em_02', 'em_01', 'distance_tube', 'container_box_red',
-                            'container_box_blue', 'bearing_box_ax16',
-                            'bearing_box_ax01', 'bearing', 'axis')
+        #robocup stable model
+        #cfg.CLASS_NAMES =('s40_40_G', 's40_40_B', 'r20','motor',
+        #                    'm30', 'm20_100', 'm20', 'f20_20_G', 'f20_20_B',
+        #                    'em_02', 'em_01', 'distance_tube', 'container_box_red',
+        #                    'container_box_blue', 'bearing_box_ax16',
+        #                    'bearing_box_ax01', 'bearing', 'axis')
+        #sciroc_2021 model
+        cfg.CLASS_NAMES =('CHICKPEAS', 'GRND_PAPRIKA', 'SUNFLWR_SEEDS')
 
     # number of categories to classify
     cfg.CLASSES = len(cfg.CLASS_NAMES)    

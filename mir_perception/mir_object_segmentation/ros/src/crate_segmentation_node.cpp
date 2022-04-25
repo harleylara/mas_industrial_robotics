@@ -11,6 +11,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/common/common.h>
 
 #include <std_msgs/Float64.h>
 
@@ -32,7 +33,8 @@
 CrateSegmentationNode::CrateSegmentationNode()
     : nh_("~"),
       bounding_box_visualizer_("output/bounding_boxes", Color(Color::SEA_GREEN)),
-      cluster_visualizer_("output/tabletop_clusters")
+      cluster_visualizer_("output/tabletop_clusters"),
+      label_visualizer_("output/labels", Color(Color::DEEP_PINK))
 {
   sub_event_in_ = nh_.subscribe("event_in", 1, &CrateSegmentationNode::eventCallback, this);
   pub_event_out_ = nh_.advertise<std_msgs::String>("event_out", 1);
@@ -130,49 +132,75 @@ void CrateSegmentationNode::pointcloudCallback(const sensor_msgs::PointCloud2::P
     object_list.objects.resize(clusters.size());
     poses.header.stamp = ros::Time::now();
     poses.header.frame_id = target_frame_id_;
+
     std::vector<std::string> labels;
   
     ros::Time now = ros::Time::now();
+    int num_filtered_objects = 0;
     for (int i = 0; i < clusters.size(); i++) {
         convertBoundingBox(boxes[i], bounding_boxes.bounding_boxes[i]);
-        geometry_msgs::PoseStamped pose;
-        estimatePose(boxes[i], pose);
-        pose.header.stamp = now;
-        pose.header.frame_id = target_frame_id_;
 
-        //hack to set roll and pitch to zero , can be done with Eigen
-        //quaterninon in estimate pose function above
-        tf::Quaternion temp;
-        tf::quaternionMsgToTF(pose.pose.orientation, temp);
-        tf::Matrix3x3 m(temp);
-        double roll, pitch, yaw;
-        m.getRPY(roll, pitch, yaw);
-        pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, 0);
-        //End of hack
-        
-        poses.poses.push_back(pose.pose);
+        PointT min_pt;
+        PointT max_pt;
+        pcl::getMinMax3D(*clusters[i], min_pt, max_pt);
+        ROS_INFO_STREAM("Min and max z " << min_pt.z << ", " << max_pt.z);
+        ROS_INFO_STREAM(" " << min_pt.z << ", " << max_pt.z);
 
+        // base_link + cheakpeas can = ~0.15
+        if (-0.05 <= max_pt.z && max_pt.z < 0.13 && max_pt.x < 0.65)
+        {
+            geometry_msgs::PoseStamped pose;
+            estimatePose(boxes[i], pose);
+            pose.header.stamp = now;
+            pose.header.frame_id = target_frame_id_;
 
-        //Assign ros_cloud 
-        sensor_msgs::PointCloud2 ros_cloud;
-        ros_cloud.header.frame_id = target_frame_id_;
-        pcl::toROSMsg(*clusters[i], ros_cloud);
+            //hack to set roll and pitch to zero , can be done with Eigen
+            //quaterninon in estimate pose function above
+            tf::Quaternion temp;
+            tf::quaternionMsgToTF(pose.pose.orientation, temp);
+            tf::Matrix3x3 m(temp);
+            double roll, pitch, yaw;
+            m.getRPY(roll, pitch, yaw);
+            //pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, 0);
+            //End of hack
+            // Reducing the Z axis value so that the object will be grippd at a lower
+            // point FOR SCIROC21
+            pose.pose.position.z -= 0.02;
+            
+            //Assign ros_cloud 
+            sensor_msgs::PointCloud2 ros_cloud;
+            ros_cloud.header.frame_id = target_frame_id_;
+            pcl::toROSMsg(*clusters[i], ros_cloud);
 
-        // Assign number name for every object by default then recognize it later
-        object_list.objects[i].views.resize(1);
-        object_list.objects[i].views[0].point_cloud = ros_cloud;
-        object_list.objects[i].name = std::to_string(i);;
-        object_list.objects[i].probability = 0.0;
-        object_list.objects[i].pose = pose;
+            // Assign number name for every object by default then recognize it later
+            object_list.objects[i].views.resize(1);
+            object_list.objects[i].views[0].point_cloud = ros_cloud;
+            object_list.objects[i].name = std::to_string(num_filtered_objects);
+            object_list.objects[i].probability = 0.0;
+            object_list.objects[i].pose = pose;
+
+            poses.poses.push_back(pose.pose);
+            labels.push_back(std::to_string(num_filtered_objects));
+
+            std::cout<<"pose name"<<object_list.objects[i].name<<std::endl;
+            num_filtered_objects ++;
+        }
+        else
+        {
+            object_list.objects[i].name = "DECOY";
+        }
     }
+
+    std::cout<<"Object size: "<<object_list.objects.size()<<std::endl;
     pub_object_list_.publish(object_list);
     bounding_box_visualizer_.publish(bounding_boxes.bounding_boxes, target_frame_id_);
     cluster_visualizer_.publish<PointT>(clusters, target_frame_id_);
+    label_visualizer_.publish(labels, poses);
     pub_pose_list_.publish(poses);
-
 
     std_msgs::String event_out;
     event_out.data = "e_add_cloud_stopped";
+    /* event_out.data = "e_started"; */
     pub_event_out_.publish(event_out);
 
     PointCloud::Ptr cloud_debug(new PointCloud);
@@ -183,6 +211,7 @@ void CrateSegmentationNode::pointcloudCallback(const sensor_msgs::PointCloud2::P
     pub_debug_.publish(ros_pc2);
     //msg_transformed.header.frame_id = target_frame_id_;
     //pub_debug_.publish(msg_transformed);
+
 }
 
 
