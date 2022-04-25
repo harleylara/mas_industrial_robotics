@@ -4,6 +4,7 @@ import mcr_states.common.basic_states as gbs
 import mir_states.common.manipulation_states as gms  # move the arm, and gripper
 import rospy
 import smach
+import numpy as np
 from mir_actions.utils import Utils
 from mir_planning_msgs.msg import (
     GenericExecuteAction,
@@ -99,6 +100,25 @@ class CheckIfLocationIsShelf(smach.State):
 
 # ===============================================================================
 
+class PlacePoseSelectorCounter(smach.State):
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["15cm/pose6", "15cm/pose2"],
+            input_keys=["goal", "check_place_pose_counter"],
+            output_keys=["feedback", "result", "check_place_pose_counter"],
+        )
+    
+    def execute(self, userdata):
+        #get min objects in the current loc
+        selected_pose = min(userdata.check_place_pose_counter, key=userdata.check_place_pose_counter.get)
+        #update counter
+        userdata.check_place_pose_counter[selected_pose] += 1
+        return selected_pose
+
+
+# ===============================================================================
+
 
 def main():
     rospy.init_node("place_object_server")
@@ -108,6 +128,7 @@ def main():
         input_keys=["goal", "feedback", "result"],
         output_keys=["feedback", "result"],
     )
+    sm.userdata.check_place_pose_counter = {"15cm/pose6": 0, "15cm/pose2": 0}
     with sm:
         # add states to the container
         smach.StateMachine.add(
@@ -212,6 +233,7 @@ def main():
             gbs.send_event(
                 [("/mcr_perception/place_pose_selector/event_in", "e_start")]
             ),
+            #transitions={"success": "MOVE_ARM_TO_SELECTED_PLACE_POSE"},
             transitions={"success": "GET_POSE_TO_PLACE_OBJECT"},
         )
 
@@ -221,17 +243,46 @@ def main():
                 "/mcr_perception/place_pose_selector/platform_name",
                 "/mcr_perception/place_pose_selector/place_pose",
                 "/mcr_perception/place_pose_selector/event_out",
-                15.0,
+                1.0,
+                #15.0,
             ),
             transitions={
                 "succeeded": "MOVE_ARM_TO_PLACE_OBJECT",
-                "failed": "MOVE_ARM_TO_DEFAULT_PLACE",
+                "failed": "MOVE_ARM_TO_SELECTED_PLACE_POSE",
+                #"failed": "MOVE_ARM_TO_DEFAULT_PLACE",
+            },
+        )
+
+        smach.StateMachine.add(
+            "MOVE_ARM_TO_SELECTED_PLACE_POSE",
+            PlacePoseSelectorCounter(),
+            transitions={
+                "15cm/pose6": "MOVE_ARM_TO_15CM_POSE6",
+                "15cm/pose2": "MOVE_ARM_TO_15CM_POSE2",
+            },
+        )
+
+        smach.StateMachine.add(
+            "MOVE_ARM_TO_15CM_POSE6",
+            gms.move_arm("15cm/pose6"),
+            transitions={
+                "succeeded": "OPEN_GRIPPER",
+                "failed": "MOVE_ARM_TO_SELECTED_PLACE_POSE",
+            },
+        )
+
+        smach.StateMachine.add(
+            "MOVE_ARM_TO_15CM_POSE2",
+            gms.move_arm("15cm/pose2"),
+            transitions={
+                "succeeded": "OPEN_GRIPPER",
+                "failed": "MOVE_ARM_TO_SELECTED_PLACE_POSE",
             },
         )
 
         smach.StateMachine.add(
             "MOVE_ARM_TO_DEFAULT_PLACE",
-            gms.move_arm("15cm/pose4"),
+            gms.move_arm("15cm/pose1"),
             transitions={
                 "succeeded": "OPEN_GRIPPER",
                 "failed": "MOVE_ARM_TO_DEFAULT_PLACE",
